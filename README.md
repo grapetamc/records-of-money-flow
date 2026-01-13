@@ -31,6 +31,7 @@ Gmailに来るビューカードの利用通知から，自動的にGoogle Sheet
 利用する場合はmain.jsに加え，定期実行するとよい．
 
 Google Sheets側にview_cardという名前のシートを作成し，次の図のように設定する．
+
 <img width="801" height="77" alt="image" src="https://github.com/user-attachments/assets/329b4724-7b2c-47d4-ac25-b1d7c725af14" />
 
 
@@ -41,6 +42,7 @@ Gmailに来る楽天デビットの利用通知から，自動的にGoogle Sheet
 
 Google Sheets側にrakuten_debitという名前のシートを作成し，次の図のように設定する．
 即時通知なのでメール受信日時を決済日時としている．
+
 <img width="568" height="108" alt="image" src="https://github.com/user-attachments/assets/8e9ba938-8736-40ba-9657-e03d4ae65e02" />
 
 

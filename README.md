@@ -16,6 +16,8 @@ GASで生成したWebUIを通じてSheetsに入力できる．
 入力したデータを煮たり焼いたりすると好みの家計簿ができるでしょう．
 
 ## index.html
+<img width="458" height="1125" alt="image" src="https://github.com/user-attachments/assets/ad5c5137-2837-41f0-86c8-539174d4ba37" />
+
 
 ## main.js (code.gs)
 

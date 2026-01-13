@@ -1,9 +1,11 @@
 # records-of-money-flow
 
 Google Apps Script (GAS) + Google Sheets (スプレッドシート) を用いて家計簿的なものを作成した．
+
 GASで生成したWebUIを通じてSheetsに入力できる．
 
 対応している具体的な操作
+
 ・入金
 　・日付，金額，口座，etcを指定して入金
 ・出金

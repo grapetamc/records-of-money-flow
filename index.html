@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        background-color: #f8f9fa;
+        color: #333;
+        -webkit-overflow-scrolling: touch; 
+      }
+      .container {
+        max-width: 400px;
+        margin: 0 auto;
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      h2 { text-align: center; margin-top: 0; color: #555; font-size: 1.2rem;}
+      
+      label { display: block; margin-top: 20px; margin-bottom: 8px; font-weight: bold; font-size: 0.9rem; }
+      
+      input[type="text"], input[type="number"], input[type="date"], select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-sizing: border-box;
+        font-size: 16px;
+        background-color: #fff;
+      }
+
+      .chips-group {
+        display: flex;
+        flex-wrap: wrap; /* 折り返しを許可 */
+        gap: 8px;       /* チップ間の隙間 */
+      }
+      
+      /* ラジオボタン本体は隠す */
+      .chips-group input[type="radio"] {
+        display: none;
+      }
+
+      /* チップ（ラベル）のスタイル */
+      .chip-label {
+        padding: 8px 16px;
+        background-color: #f1f1f1;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+        user-select: none;
+        text-align: center;
+        flex-grow: 1; /* 横幅を均等に埋めようとする */
+      }
+
+      /* --- メイン種別（支出/収入/移動）の選択スタイル --- */
+      /* 支出選択時 */
+      #type-out:checked + label { background-color: #ff6b6b; color: white; border-color: #ff6b6b; }
+      /* 収入選択時 */
+      #type-in:checked + label { background-color: #4CAF50; color: white; border-color: #4CAF50; }
+      /* 移動選択時 */
+      #type-move:checked + label { background-color: #2196F3; color: white; border-color: #2196F3; }
+
+      /* --- 口座・費目の選択スタイル --- */
+      /* 口座などが選択されたときは濃いグレー/黒にする */
+      .account-chip:checked + label, .cat-chip:checked + label {
+        background-color: #555;
+        color: white;
+        border-color: #555;
+        font-weight: bold;
+      }
+
+      button {
+        margin-top: 30px;
+        width: 100%;
+        padding: 14px;
+        background-color: #333;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+      
+      #message {
+        text-align: center;
+        margin-top: 15px;
+        height: 20px;
+        font-size: 0.9rem;
+        color: #4CAF50;
+      }
+
+      .hidden { display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>家計簿登録</h2>
+      
+      <form id="kakeiboForm" onsubmit="handleFormSubmit(this)">
+        
+        <div class="chips-group" style="justify-content: center; margin-bottom: 20px;">
+          <input type="radio" id="type-out" name="type" value="支出" checked onchange="updateUI()">
+          <label for="type-out" class="chip-label" style="flex-grow: 0; padding: 10px 25px;">支出</label>
+
+          <input type="radio" id="type-in" name="type" value="収入" onchange="updateUI()">
+          <label for="type-in" class="chip-label" style="flex-grow: 0; padding: 10px 25px;">収入</label>
+
+          <input type="radio" id="type-move" name="type" value="移動" onchange="updateUI()">
+          <label for="type-move" class="chip-label" style="flex-grow: 0; padding: 10px 25px;">移動</label>
+        </div>
+
+        <label for="date">日付</label>
+        <input type="date" id="date" name="date" required>
+
+        <div id="regular-fields">
+          <label>費目</label>
+          <div id="category-container" class="chips-group"></div>
+
+          <label>決済口座</label>
+          <div id="account-container" class="chips-group"></div>
+        </div>
+
+        <div id="transfer-fields" class="hidden">
+          <label style="color: #2196F3;">移動元 (出金)</label>
+          <div id="from-account-container" class="chips-group"></div>
+
+          <label style="color: #2196F3;">移動先 (入金)</label>
+          <div id="to-account-container" class="chips-group"></div>
+        </div>
+
+        <label for="amount">金額</label>
+        <input type="number" id="amount" name="amount" placeholder="0" required inputmode="numeric">
+
+        <label for="memo">メモ</label>
+        <input type="text" id="memo" name="memo" placeholder="備考">
+
+        <label for="tag">タグ</label>
+        <input type="text" id="tag" name="tag" placeholder="カンマ区切りで入力">
+
+        <button type="submit" id="submitBtn">登録</button>
+      </form>
+      
+      <div id="message"></div>
+    </div>
+
+    <script>
+      // === 設定データ (ここを変更すると項目が変わります) ===
+      const categoriesData = {
+        '支出': ['AA', 'BB', 'CC'],
+        '収入': ['DD', 'EE', 'FF']
+      };
+      
+      // 口座リスト
+      const accountsData = ['GG', 'HH', 'II'];
+
+      // ============================================
+
+      window.onload = function() {
+        document.getElementById('date').valueAsDate = new Date();
+        initAllChips(); // 口座チップの生成
+        updateUI();     // 費目チップの生成と表示切替
+      };
+
+      // 口座Chipsを生成する関数
+      function createChips(containerId, inputName, options) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = ''; // クリア
+        
+        options.forEach((opt, index) => {
+          // IDはユニークにする必要があるため inputName + index を付与
+          const uniqueId = inputName + '_' + index;
+          
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = inputName;
+          radio.value = opt;
+          radio.id = uniqueId;
+          radio.className = 'account-chip'; // スタイル適用用クラス
+          if (index === 0) radio.checked = true; // 最初を選択状態に
+
+          const label = document.createElement('label');
+          label.htmlFor = uniqueId;
+          label.innerText = opt;
+          label.className = 'chip-label';
+
+          container.appendChild(radio);
+          container.appendChild(label);
+        });
+      }
+
+      // 費目Chipsを生成する関数 (費目は支出/収入で入れ替わるため別処理)
+      function createCategoryChips(type) {
+        const container = document.getElementById('category-container');
+        container.innerHTML = '';
+        
+        const list = categoriesData[type];
+        list.forEach((cat, index) => {
+          const uniqueId = 'cat_' + index;
+          
+          const radio = document.createElement('input');
+          radio.type = 'radio';
+          radio.name = 'category';
+          radio.value = cat;
+          radio.id = uniqueId;
+          radio.className = 'cat-chip';
+          if (index === 0) radio.checked = true;
+
+          const label = document.createElement('label');
+          label.htmlFor = uniqueId;
+          label.innerText = cat;
+          label.className = 'chip-label';
+
+          container.appendChild(radio);
+          container.appendChild(label);
+        });
+      }
+
+      function initAllChips() {
+        // 通常の決済口座
+        createChips('account-container', 'account', accountsData);
+        // 移動元
+        createChips('from-account-container', 'fromAccount', accountsData);
+        // 移動先
+        createChips('to-account-container', 'toAccount', accountsData);
+      }
+
+      function updateUI() {
+        const type = document.querySelector('input[name="type"]:checked').value;
+        const regularFields = document.getElementById('regular-fields');
+        const transferFields = document.getElementById('transfer-fields');
+        const btn = document.getElementById('submitBtn');
+
+        if (type === '移動') {
+          regularFields.classList.add('hidden');
+          transferFields.classList.remove('hidden');
+          btn.style.backgroundColor = "#2196F3"; // 青
+        } else {
+          regularFields.classList.remove('hidden');
+          transferFields.classList.add('hidden');
+          
+          // 費目リストを再生成
+          createCategoryChips(type);
+
+          if (type === '支出') btn.style.backgroundColor = "#ff6b6b"; // 赤
+          else btn.style.backgroundColor = "#4CAF50"; // 緑
+        }
+      }
+
+      function handleFormSubmit(formObject) {
+        event.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const msg = document.getElementById('message');
+        
+        btn.disabled = true;
+        btn.innerText = "送信中...";
+        msg.innerText = "";
+
+        google.script.run
+          .withSuccessHandler(function(response) {
+            msg.innerText = response;
+            document.getElementById('amount').value = "";
+            document.getElementById('memo').value = "";
+            document.getElementById('tag').value = "";
+            btn.disabled = false;
+            btn.innerText = "登録";
+            setTimeout(() => { msg.innerText = ""; }, 3000);
+          })
+          .withFailureHandler(function(error) {
+             msg.style.color = "red";
+             msg.innerText = "エラー: " + error;
+             btn.disabled = false;
+          })
+          .processForm(formObject);
+      }
+    </script>
+  </body>
+</html>
